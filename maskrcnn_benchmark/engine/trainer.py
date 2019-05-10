@@ -69,7 +69,7 @@ def do_train(
         targets = [target.to(device) for target in targets]
 
         loss_dict = model(images, targets)
-        pdb.set_trace()
+        # pdb.set_trace()
 
         losses = sum(loss for loss in loss_dict.values())
         # print(torch_xla._XLAC._xla_metrics_report())
