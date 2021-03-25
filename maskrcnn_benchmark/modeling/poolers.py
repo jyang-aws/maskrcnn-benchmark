@@ -81,12 +81,18 @@ class Pooler(nn.Module):
         device, dtype = concat_boxes.device, concat_boxes.dtype
         ids = cat(
             [
-                torch.full((len(b), 1), i, dtype=dtype, device=device)
+                torch.full((len(b), 1), i, dtype=torch.float64, device=device)
                 for i, b in enumerate(boxes)
             ],
             dim=0,
         )
-        rois = torch.cat([ids, concat_boxes], dim=1)
+        #rois = torch.cat([ids, concat_boxes], dim=1)
+        print(f'ids = {ids.shape}')
+        print(f'concat_boxes shape = {concat_boxes.shape})')
+        print(f'ids dtype = {ids.dtype}')
+        print(f'concat_boxes dtype = {concat_boxes.dtype})')
+        rois = torch.cat((ids, concat_boxes), dim=1)
+        
         return rois
 
     def forward(self, x, boxes):
@@ -114,16 +120,31 @@ class Pooler(nn.Module):
             dtype=dtype,
             device=device,
         )
-        for level, (per_level_feature, pooler) in enumerate(zip(x, self.poolers)):
-            xla_device = per_level_feature.device
-            idx_in_level = torch.nonzero(levels == level).squeeze(1)
-            rois_per_level = rois[idx_in_level]
-            torch_xla._XLAC._xla_sync_multi([per_level_feature, rois_per_level], devices=[])
-            per_level_feature_cpu = per_level_feature.cpu().clone()
-            rois_per_level_cpu = rois_per_level.cpu().clone()
-
-            result[idx_in_level] = pooler(per_level_feature_cpu, rois_per_level_cpu).to(xla_device)
-
+        print(f'result is on {result.device}')
+        
+        flag_xla = True
+        if not flag_xla:
+            # below calls the ROI align
+            for level, (per_level_feature, pooler) in enumerate(zip(x, self.poolers)):
+                xla_device = per_level_feature.device
+                idx_in_level = torch.nonzero(levels == level).squeeze(1)
+                rois_per_level = rois[idx_in_level]
+                torch_xla._XLAC._xla_sync_multi([per_level_feature, rois_per_level], devices=[])
+                print('--- doing cpu cloning... ---')
+                per_level_feature_cpu = per_level_feature.cpu().clone()
+                rois_per_level_cpu = rois_per_level.cpu().clone()
+                # this is actually doing the pooler thing
+                result[idx_in_level] = pooler(per_level_feature_cpu, rois_per_level_cpu).to(xla_device)
+        else:# pure xla 
+            for level, (per_level_feature, pooler) in enumerate(zip(x, self.poolers)):
+                xla_device = per_level_feature.device
+                idx_in_level = torch.nonzero(levels == level).squeeze(1)
+                rois_per_level = rois[idx_in_level]
+                torch_xla._XLAC._xla_sync_multi([per_level_feature, rois_per_level], devices=[])
+                print('--- NOT doing cpu cloning...  ---')
+                # this is actually doing the pooler thing
+                result[idx_in_level] = pooler(per_level_feature, rois_per_level).to(xla_device)
+        print(f'end of Pooler: result is on {result.device}')
         return result
 
 

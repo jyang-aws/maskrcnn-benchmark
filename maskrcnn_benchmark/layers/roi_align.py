@@ -56,16 +56,32 @@ class ROIAlign(nn.Module):
         self.sampling_ratio = sampling_ratio
 
     def forward(self, input, rois):
+        print(f'my input device type is {input.device.type}')
+        #print(f'input type is {input.dtype}')
+        #print(f'rois type is {rois.dtype}')
+        rois = rois.to(torch.float32)
+        #print(f'input type is {input.dtype}')
+        print(f'input shape is {input.shape}')
+        print(f'rois shape is {rois.shape}')
         if self.sampling_ratio > 0 and input.device.type == 'xla':
+            print('tensor-impl of ROI_align')
             batch_size = input.size(0)
             num_rois = rois.size(0)
-            rois = rois[:, 1:].reshape(batch_size, num_rois, -1)
-            return tensor_roi_align(
+            # rois shape [num, 5]
+            if num_rois != 0:
+                rois = rois[:, 1:].reshape(batch_size, num_rois, -1) # ignore indexs
+                ret = tensor_roi_align(
                 input, rois, self.output_size, self.spatial_scale, self.sampling_ratio
             )
+            else:
+                ret = torch.zeros(0, input.shape[1], self.output_size[0], self.output_size[0], device = input.device) 
+            return ret
+
+        print('CPU imp of ROI_align')
         return roi_align(
             input, rois, self.output_size, self.spatial_scale, self.sampling_ratio
-        )
+        )   
+
 
     def __repr__(self):
         tmpstr = self.__class__.__name__ + "("

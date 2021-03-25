@@ -65,6 +65,7 @@ class ROIMaskHead(torch.nn.Module):
         if self.training and self.cfg.MODEL.ROI_MASK_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
             x = features
         else:
+            print('[ROI Head] mask_head')
             x = self.feature_extractor(features, proposals)
         mask_logits = self.predictor(x)
 

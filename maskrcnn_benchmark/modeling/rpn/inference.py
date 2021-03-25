@@ -79,6 +79,11 @@ class RPNPostProcessor(torch.nn.Module):
             box_regression: tensor of size N, A * 4, H, W
         """
         device = objectness.device
+        print('at forward_for_single_feature_map')
+        print(device)
+        #print(f'anchor is at {anchors[0].bbox}') # box is okay
+        #print(f'objectness is at {objectness}') # objectness is okay
+        #print(f'box_regression is {box_regression}')
         N, A, H, W = objectness.shape
 
         # put in the same format as anchors
@@ -87,9 +92,12 @@ class RPNPostProcessor(torch.nn.Module):
 
         box_regression = permute_and_flatten(box_regression, N, A, 4, H, W)
 
+        print(f'[RPN] objectness is at {objectness}') # objectness is okay
+        print(f'[RPN] box_regression is {box_regression}')
         num_anchors = A * H * W
 
         pre_nms_top_n = min(self.pre_nms_top_n, num_anchors)
+        print(f'[RPN] pre_nms_to_n: {pre_nms_top_n}')
         objectness, topk_idx = objectness.topk(pre_nms_top_n, dim=1, sorted=True)
 
         batch_idx = torch.arange(N, device=device)[:, None]
@@ -98,12 +106,15 @@ class RPNPostProcessor(torch.nn.Module):
         image_shapes = [box.size for box in anchors]
         concat_anchors = torch.cat([a.bbox for a in anchors], dim=0)
         concat_anchors = concat_anchors.reshape(N, -1, 4)[batch_idx, topk_idx]
-
+        #print(f'concat_anchors: {concat_anchors}')
+        #print(f'box_regression is {box_regression}')
+        print('[RPN] running box_coder.decode')
         proposals = self.box_coder.decode(
             box_regression.view(-1, 4), concat_anchors.view(-1, 4)
         )
 
         proposals = proposals.view(N, -1, 4)
+        #print(f'[RPN] proposals: {proposals}')
 
         result = []
         for proposal, score, im_shape in zip(proposals, objectness, image_shapes):

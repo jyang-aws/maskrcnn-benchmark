@@ -50,9 +50,16 @@ def remove_small_boxes(boxlist, min_size):
     # TODO maybe add an API for querying the ws / hs
     xywh_boxes = boxlist.convert("xywh").bbox
     _, _, ws, hs = xywh_boxes.unbind(dim=1)
+    # min_size -> int type
+    #print(f'ws: {ws.shape}')
+    #print(f'hs: {hs.shape}')
+    #print((
+    #    (ws >= min_size) & (hs >= min_size)
+    #).nonzero().squeeze(1).dtype) # torch.Size([1000]), should be int64
+    # print all int
     keep = (
         (ws >= min_size) & (hs >= min_size)
-    ).nonzero().squeeze(1)
+    ).nonzero().squeeze(1) # remove the 1 dim
     return boxlist[keep]
 
 

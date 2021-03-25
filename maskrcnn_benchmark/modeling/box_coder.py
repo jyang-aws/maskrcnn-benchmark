@@ -58,8 +58,11 @@ class BoxCoder(object):
             rel_codes (Tensor): encoded boxes
             boxes (Tensor): reference boxes.
         """
-
+        print('decoding...')
+        print(rel_codes.dtype) # this is torch.float32
+        # change to torch.float64
         boxes = boxes.to(rel_codes.dtype)
+        print(boxes)
 
         TO_REMOVE = 1  # TODO remove
         widths = boxes[:, 2] - boxes[:, 0] + TO_REMOVE
@@ -76,13 +79,30 @@ class BoxCoder(object):
         # Prevent sending too large values into torch.exp()
         dw = torch.clamp(dw, max=self.bbox_xform_clip)
         dh = torch.clamp(dh, max=self.bbox_xform_clip)
-
+        print(f'transferred...')
+        print(f'dx = {dx.shape}')
         pred_ctr_x = dx * widths[:, None] + ctr_x[:, None]
         pred_ctr_y = dy * heights[:, None] + ctr_y[:, None]
         pred_w = torch.exp(dw) * widths[:, None]
         pred_h = torch.exp(dh) * heights[:, None]
 
+
+
         pred_boxes = torch.zeros_like(rel_codes)
+        #print(f'rel_codes: {rel_codes}, type: {rel_codes.dtype}')
+        #print(f'pre_boxes: {pred_boxes}, type: {pred_boxes.dtype}, shape: {pred_boxes.shape}')
+        '''
+        print(f'shift calculations... ')
+        print(f'pred_ctr_x: {pred_ctr_x}')
+        print(f'pred_ctr_y: {pred_ctr_y}')
+        print(f'pred_w: {pred_w}')
+        print(f'pred_h: {pred_h}')
+        '''
+
+        print(f'pred_boxes: {pred_boxes.shape}')
+        print(f'pred_h: {pred_h.shape}')
+        print(f'pred_w: {pred_w.shape}')
+
         # x1
         pred_boxes[:, 0::4] = pred_ctr_x - 0.5 * pred_w
         # y1
@@ -91,5 +111,11 @@ class BoxCoder(object):
         pred_boxes[:, 2::4] = pred_ctr_x + 0.5 * pred_w - 1
         # y2 (note: "- 1" is correct; don't be fooled by the asymmetry)
         pred_boxes[:, 3::4] = pred_ctr_y + 0.5 * pred_h - 1
-
+ 
+        # need to verify the tensor values!!
+        pred_boxes = torch.cat((pred_ctr_x - 0.5 * pred_w, pred_ctr_y - 0.5 * pred_h, pred_ctr_x + 0.5 * pred_w - 1, pred_ctr_y + 0.5 * pred_h - 1), dim = 1)
+        
+        #print(f'finisehd shift calculations... ')
+        print(f'pred_boxes: {pred_boxes}')
+        print(f'pred_boxes dtype: {pred_boxes.dtype}')
         return pred_boxes

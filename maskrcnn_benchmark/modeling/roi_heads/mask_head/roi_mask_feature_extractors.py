@@ -57,6 +57,7 @@ class MaskRCNNFPNFeatureExtractor(nn.Module):
         self.out_channels = layer_features
 
     def forward(self, x, proposals):
+        print('[ROI Head] start feature extraction')
         x = self.pooler(x, proposals)
 
         for layer_name in self.blocks:
