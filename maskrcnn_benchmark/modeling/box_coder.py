@@ -102,20 +102,32 @@ class BoxCoder(object):
         print(f'pred_boxes: {pred_boxes.shape}')
         print(f'pred_h: {pred_h.shape}')
         print(f'pred_w: {pred_w.shape}')
+        print(f'pred_boxes dtype: {pred_boxes.dtype}')
+        print(f'pred_h dtype: {pred_h.dtype}')
+        print(f'pred_w dtype: {pred_w.dtype}')
 
+        # how to deal with it when pred_boxes [n, ]
+        dev = pred_boxes.device
+        pred_boxes = pred_boxes.to(torch.float32)
+        pred_ctr_x = pred_ctr_x.to(torch.float32)
+        pred_ctr_y = pred_ctr_y.to(torch.float32)
+        pred_w = pred_w.to(torch.float64)
+        pred_h = pred_h.to(torch.float64)
+        
         # x1
-        pred_boxes[:, 0::4] = pred_ctr_x - 0.5 * pred_w
+        pred_boxes[:, 0::4] = pred_ctr_x - torch.tensor(0.5, dtype = torch.float32, device = dev) * pred_w
         # y1
-        pred_boxes[:, 1::4] = pred_ctr_y - 0.5 * pred_h
+        pred_boxes[:, 1::4] = pred_ctr_y - torch.tensor(0.5, dtype = torch.float32, device = dev) * pred_h
         # x2 (note: "- 1" is correct; don't be fooled by the asymmetry)
-        pred_boxes[:, 2::4] = pred_ctr_x + 0.5 * pred_w - 1
+        pred_boxes[:, 2::4] = pred_ctr_x + torch.tensor(0.5, dtype = torch.float32, device = dev) * pred_w - torch.tensor(1.0, dtype = torch.float32, device = dev)
         # y2 (note: "- 1" is correct; don't be fooled by the asymmetry)
-        pred_boxes[:, 3::4] = pred_ctr_y + 0.5 * pred_h - 1
+        pred_boxes[:, 3::4] = pred_ctr_y + torch.tensor(0.5, dtype = torch.float32, device = dev) * pred_h - torch.tensor(1.0, dtype = torch.float32, device = dev)
  
         # need to verify the tensor values!!
-        pred_boxes = torch.cat((pred_ctr_x - 0.5 * pred_w, pred_ctr_y - 0.5 * pred_h, pred_ctr_x + 0.5 * pred_w - 1, pred_ctr_y + 0.5 * pred_h - 1), dim = 1)
+        #pred_boxes = torch.cat((pred_ctr_x - 0.5 * pred_w, pred_ctr_y - 0.5 * pred_h, pred_ctr_x + 0.5 * pred_w - 1, pred_ctr_y + 0.5 * pred_h - 1), dim = 1)
         
         #print(f'finisehd shift calculations... ')
         print(f'pred_boxes: {pred_boxes}')
+        print(f'pred_boxes shape: {pred_boxes.shape}')
         print(f'pred_boxes dtype: {pred_boxes.dtype}')
         return pred_boxes

@@ -81,7 +81,7 @@ class Pooler(nn.Module):
         device, dtype = concat_boxes.device, concat_boxes.dtype
         ids = cat(
             [
-                torch.full((len(b), 1), i, dtype=torch.float64, device=device)
+                torch.full((len(b), 1), i, dtype=concat_boxes.dtype device=device)
                 for i, b in enumerate(boxes)
             ],
             dim=0,
